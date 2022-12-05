@@ -1,0 +1,29 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Current File",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--env_name", "InvertedPendulum-v4",
+                "--ep_len", "1000",
+                "--discount", "0.95",
+                "-n", "100",
+                "-l", "2",
+                "-s", "64",
+                "-b", "5000",
+                "-lr", "0.05",
+                "-ntu", "10",
+                "-ngsptu", "10",
+                "--exp_name", "project_test_run"
+            ]
+        }
+    ]
+}
