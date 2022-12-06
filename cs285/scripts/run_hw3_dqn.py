@@ -26,7 +26,6 @@ class Q_Trainer(object):
         self.params['agent_params'] = self.agent_params
         self.params['train_batch_size'] = params['batch_size']
         self.params['env_wrappers'] = self.agent_params['env_wrappers']
-
         self.rl_trainer = RL_Trainer(self.params)
 
     def run_training_loop(self):
@@ -64,11 +63,18 @@ def main():
 
     parser.add_argument('--save_params', action='store_true')
 
+    # final project
+    parser.add_argument('--rho_explore', action='store_true')
+    parser.add_argument('--rho', type=float) # perturbation bound
+    parser.add_argument('--lambda', type=int) # lambda step away
+    parser.add_argument('--rho_sample', type=int) # number of perturbation samples
+
     args = parser.parse_args()
 
     # convert to dictionary
     params = vars(args)
     params['video_log_freq'] = -1 # This param is not used for DQN
+
     ##################################
     ### CREATE DIRECTORY FOR LOGGING
     ##################################

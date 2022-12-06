@@ -33,12 +33,6 @@ class ACAgent(BaseAgent):
         self.replay_buffer = ReplayBuffer()
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
-        # TODO Implement the following pseudocode:
-        # for agent_params['num_critic_updates_per_agent_update'] steps,
-        #     update the critic
-        # advantage = estimate_advantage(...)
-        # for agent_params['num_actor_updates_per_agent_update'] steps,
-        #     update the actor
         
         loss = OrderedDict()
         loss['Critic_Loss'] = []

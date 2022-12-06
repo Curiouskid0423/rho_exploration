@@ -4,6 +4,8 @@ from gym import Env
 from cs285.infrastructure.dqn_utils import MemoryOptimizedReplayBuffer, PiecewiseSchedule
 from cs285.policies.argmax_policy import ArgMaxPolicy
 from cs285.critics.dqn_critic import DQNCritic
+# final project code
+from cs285.explore.rho_explore_policy import RhoExplorePolicy
 
 
 class DQNAgent(object):
@@ -32,6 +34,15 @@ class DQNAgent(object):
             agent_params['replay_buffer_size'], agent_params['frame_history_len'], lander=lander)
         self.t = 0
         self.num_param_updates = 0
+
+        if 'rho_explore' in self.agent_params and self.agent_params['rho_explore']:
+            self.rho_explorer = RhoExplorePolicy(
+                critic = self.critic,
+                rho = agent_params['rho'], 
+                lmbda = agent_params['lambda'], 
+                rho_sample = agent_params['rho_sample']
+            )
+        
 
     def add_to_replay_buffer(self, paths):
         pass
@@ -62,7 +73,12 @@ class DQNAgent(object):
                 # `frame_history_len` observations using functionality from the replay buffer,
                 # and then use those observations as input to your actor. 
             recent_obs = self.replay_buffer.encode_recent_observation()
-            action = self.actor.get_action(recent_obs)
+            # instead of exploiting, try rho-explore
+            if hasattr(self, 'rho_explorer'):
+                # print("exploring in rho-explorer...")
+                action = self.rho_explorer.get_action(obs=recent_obs, env=self.env, policy=self.actor)
+            else:    
+                action = self.actor.get_action(recent_obs)
         
         # TODO take a step in the environment using the action from the policy
         obs, reward, terminal, metadata = self.env.step(action)
