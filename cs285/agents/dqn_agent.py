@@ -47,6 +47,29 @@ class DQNAgent(object):
     def add_to_replay_buffer(self, paths):
         pass
 
+    def determine_policy(self):
+        """
+        A helper method to decide between random exploration, 
+        local exploration, or exploitation.
+        """
+        eps = self.exploration.value(self.t)
+        cap = .5
+        count = np.random.random()
+        if not hasattr(self, 'rho_explorer'):
+            if (count > (1 - eps)) or self.t < self.learning_starts:
+                return 'sparse'
+            else:
+                return 'exploit'
+        else:
+            if count > cap: # exploitation
+                return 'exploit'
+            else: # exploration
+                encourage_sparcity = eps > cap or count < eps # eps typically decreases over time
+                if encourage_sparcity or self.t < self.learning_starts:
+                    return 'sparse'
+                else:
+                    return 'local'
+
     def step_env(self):
         """
             Step the env and store the transition
@@ -60,27 +83,24 @@ class DQNAgent(object):
         self.replay_buffer_idx = self.replay_buffer.store_frame(self.last_obs)
 
         # TODO use epsilon greedy exploration when selecting action
-        eps = self.exploration.value(self.t)
-        perform_random_action = (np.random.random() > (1 - eps)) or self.t < self.learning_starts
-        if perform_random_action:
-            # HINT: take random action (can sample from self.env.action_space)
-                # with probability eps (see np.random.random())
-                # OR if your current step number (see self.t) is less that self.learning_starts
-            action = self.env.action_space.sample()
-        else:
-            # HINT: Your actor will take in multiple previous observations ("frames") in order
-                # to deal with the partial observability of the environment. Get the most recent 
-                # `frame_history_len` observations using functionality from the replay buffer,
-                # and then use those observations as input to your actor. 
-            recent_obs = self.replay_buffer.encode_recent_observation()
-            # instead of exploiting, try rho-explore
-            if hasattr(self, 'rho_explorer'):
-                # print("exploring in rho-explorer...")
-                action = self.rho_explorer.get_action(obs=recent_obs, env=self.env, policy=self.actor)
-            else:    
-                action = self.actor.get_action(recent_obs)
+        # eps = self.exploration.value(self.t)
+        # perform_random_action = (np.random.random() > (1 - eps)) or self.t < self.learning_starts
         
-        # TODO take a step in the environment using the action from the policy
+        explore_or_exploit = self.determine_policy()
+        
+        if explore_or_exploit == 'sparse':
+            action = self.env.action_space.sample()
+        elif explore_or_exploit == 'local':
+            recent_obs = self.replay_buffer.encode_recent_observation()
+            action = self.rho_explorer.get_action(obs=recent_obs, env=self.env, policy=self.actor)
+        else:
+            # Actor will take in multiple previous observations ("frames") to deal with the 
+            # partial observability of the environment. Get the most recent `frame_history_len` 
+            # observations using functionality from the replay buffer, and then use those 
+            # observations as input to your actor. 
+            recent_obs = self.replay_buffer.encode_recent_observation()
+            action = self.actor.get_action(recent_obs)
+        
         obs, reward, terminal, metadata = self.env.step(action)
         self.last_obs = obs
 

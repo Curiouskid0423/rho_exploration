@@ -72,7 +72,8 @@ def get_env_kwargs(env_name):
             'num_timesteps': 300000, #500000,
             'env_wrappers': lunar_empty_wrapper
         }
-        kwargs['exploration_schedule'] = lander_exploration_schedule(kwargs['num_timesteps'])
+        # kwargs['exploration_schedule'] = lander_exploration_schedule(kwargs['num_timesteps'])
+        kwargs['exploration_schedule'] = LinearSchedule(kwargs['num_timesteps'], final_p=0., initial_p=.5)
 
     else:
         raise NotImplementedError
@@ -165,6 +166,7 @@ def lander_optimizer():
             lr=1,
         ),
         learning_rate_schedule=lambda epoch: 1e-3,  # keep init learning rate
+        # learning_rate_schedule=lambda epoch: 5e-4,  # keep init learning rate
     )
 
 

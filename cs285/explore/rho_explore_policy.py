@@ -100,7 +100,6 @@ class RhoExplorePolicy(object):
             assert hasattr(self, 'sample_threshold') 
             pool_size = max(1, int(self.sample_threshold * len(scores)))
             indices = scores.argsort()[-pool_size:] # ascending order
-            # print(f"indices: {indices}")
             selected_obs = obs[indices] # (number of indices, state dimension)
         else:
             raise NotImplementedError("heuristic not identified") 
