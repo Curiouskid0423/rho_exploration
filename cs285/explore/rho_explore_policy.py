@@ -15,15 +15,15 @@ from cs285.infrastructure import pytorch_util as ptu
 EPS = 1e-7
 class RhoExplorePolicy(object):
 
-    def __init__(self, critic, rho=0.03, lmbda=1, rho_sample=100):
+    def __init__(self, critic, rho=0.03, lmbda=1, rho_sample=100, sample_heuristics='max'):
         self.critic: DQNCritic = critic
         self.look_ahead_steps = lmbda # FIXME: currently lambda always be 1. enable multi-step later.
         self.num_perturb_samples = rho_sample
         self.perturb_margin = rho
-        self.sample_heuristic = 'mode' # options: 'max', 'mode' (mode of top K percentile)
+        self.sample_heuristic = sample_heuristics # options: 'max', 'mode' (mode of top K percentile)
         self.sample_threshold = .5
 
-    def get_action(self, obs, env: Env, policy: BasePolicy):
+    def get_action(self, obs, env: Env, policy: BasePolicy, perturb_unit: float):
         
         self.env: Env = copy(env) # avoid mutating the environment in a destructive manner by shallow-copying.
         self.initial_state = copy(env)
@@ -33,18 +33,18 @@ class RhoExplorePolicy(object):
         else:
             observation = obs[None]
         
-        perturbed_obs = self.perturb(observation) # (number of perturbed states, state dimension)
+        perturbed_obs = self.perturb(observation, perturb_unit) # (number of perturbed states, state dimension)
         scores_of_perturbed_obs = self.step_ahead(perturbed_obs, policy=policy) # (number of perturbed states, )
         actions = self.sample_by_heuristic(
             obs = perturbed_obs,
             scores = scores_of_perturbed_obs,
             heuristic = self.sample_heuristic,
             policy = policy
-        ) # (1, state dimension)
+        ) # (1, action dimension)
         
         return actions
 
-    def perturb(self, obs):
+    def perturb(self, obs, unit: float):
         """
         Given one observation, create `num_perturb_samples` samples given 
         the constraint of norm < `self.perturb_margin`
@@ -56,7 +56,7 @@ class RhoExplorePolicy(object):
             [noises[d] / np.linalg.norm(noises[d]) for d in range(len(obs))]
             for _ in range(self.num_perturb_samples)
         ]
-        noises = np.array(noises).squeeze() * self.perturb_margin
+        noises = np.array(noises).squeeze() * unit.squeeze() * self.perturb_margin
         if len(noises.shape) == 1:
             noises = noises[None]
         perturbed_states = np.add(obs.T, noises.T).T
@@ -108,7 +108,7 @@ class RhoExplorePolicy(object):
             selected_obs = selected_obs[None]
         actions = policy.get_action(selected_obs)
 
-        if isinstance(actions, np.ndarray):
+        if heuristic == 'mode':
             assert len(actions.shape) == 1, "actions should be a rank-1 array"
             actions = stats.mode(actions, keepdims=False).mode
             return actions

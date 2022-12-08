@@ -38,7 +38,6 @@ class ReplayBuffer(object):
                 actions = actions[None]
             # if len(self.acs.shape) == 1:
             #     self.acs = self.acs[None]
-            print(self.acs.shape, actions.shape)
             self.acs = np.concatenate([self.acs, actions])[-self.max_size:]
             self.next_obs = np.concatenate(
                 [self.next_obs, next_observations]

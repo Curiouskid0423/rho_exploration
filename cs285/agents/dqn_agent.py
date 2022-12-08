@@ -40,9 +40,10 @@ class DQNAgent(object):
                 critic = self.critic,
                 rho = agent_params['rho'], 
                 lmbda = agent_params['lambda'], 
-                rho_sample = agent_params['rho_sample']
+                rho_sample = agent_params['rho_sample'],
+                sample_heuristics = agent_params['heuristics']
             )
-        
+            self.mean_state_norm = None       
 
     def add_to_replay_buffer(self, paths):
         pass
@@ -92,7 +93,14 @@ class DQNAgent(object):
             action = self.env.action_space.sample()
         elif explore_or_exploit == 'local':
             recent_obs = self.replay_buffer.encode_recent_observation()
-            action = self.rho_explorer.get_action(obs=recent_obs, env=self.env, policy=self.actor)
+            if self.mean_state_norm is None:
+                self.compute_mean_state_norm()
+            action = self.rho_explorer.get_action(
+                obs=recent_obs, 
+                env=self.env, 
+                policy=self.actor,
+                perturb_unit=self.mean_state_norm
+            )
         else:
             # Actor will take in multiple previous observations ("frames") to deal with the 
             # partial observability of the environment. Get the most recent `frame_history_len` 
@@ -111,6 +119,19 @@ class DQNAgent(object):
         if terminal:
             self.last_obs = self.env.reset()
 
+    def compute_mean_state_norm(self, n=1000):
+        
+        from numpy.linalg import norm
+        
+        print("Calculating the mean of state vector norm...")
+        obs, act, _, _, _ = self.sample(
+            batch_size=min(n, self.replay_buffer.size))
+        assert isinstance(obs, np.ndarray) and len(obs.shape) == 2
+        obs_norms = norm(obs, axis=-1, keepdims=False)
+        assert len(obs_norms.shape) == 1
+        self.mean_state_norm = obs_norms.mean(axis=0)
+        print(f"mean_state_norm (sample size {n}): {self.mean_state_norm}\n")
+        
     def sample(self, batch_size):
         if self.replay_buffer.can_sample(self.batch_size):
             return self.replay_buffer.sample(batch_size)

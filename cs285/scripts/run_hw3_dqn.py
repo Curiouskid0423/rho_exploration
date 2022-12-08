@@ -63,12 +63,13 @@ def main():
 
     parser.add_argument('--save_params', action='store_true')
 
-    # final project
+    # final project: rho-explore
     parser.add_argument('--rho_explore', action='store_true')
     parser.add_argument('--rho', type=float) # perturbation bound
     parser.add_argument('--lambda', type=int) # lambda step away
     parser.add_argument('--rho_sample', type=int) # number of perturbation samples
-
+    parser.add_argument('--heuristics', type=str, default='max') 
+    
     args = parser.parse_args()
 
     # convert to dictionary
