@@ -190,7 +190,7 @@ class RL_Trainer(object):
                 # perform logging
                 print('\nBeginning logging procedure...')
                 if isinstance(self.agent, DQNAgent):
-                    self.perform_dqn_logging(all_logs)
+                    self.perform_dqn_logging(all_logs, eval_policy=eval_policy)
                 else:
                     self.perform_logging(itr, paths, eval_policy, train_video_paths, all_logs)
 
@@ -302,8 +302,6 @@ class RL_Trainer(object):
             envsteps_this_batch: the sum over the numbers of environment steps in paths
             train_video_paths: paths which also contain videos for visualization purposes
         """
-        # TODO: get this from hw1 or hw2
-        
         paths, envsteps_this_batch = utils.sample_trajectories(
             env=self.env, 
             policy=collect_policy,
@@ -336,7 +334,7 @@ class RL_Trainer(object):
 
     ####################################
     ####################################
-    def perform_dqn_logging(self, all_logs):
+    def perform_dqn_logging(self, all_logs, eval_policy=None):
         last_log = all_logs[-1]
 
         episode_rewards = self.env.get_episode_rewards()
@@ -346,6 +344,20 @@ class RL_Trainer(object):
             self.best_mean_episode_reward = max(self.best_mean_episode_reward, self.mean_episode_reward)
 
         logs = OrderedDict()
+
+        # Collect eval trajectories, for logging
+        if eval_policy != None:
+            print("\nCollecting data for eval...")
+            eval_paths, _ = utils.sample_trajectories(
+                self.env, eval_policy, self.params['eval_batch_size'], self.params['ep_len'])
+
+            eval_returns = [eval_path["reward"].sum() for eval_path in eval_paths]
+            eval_ep_lens = [len(eval_path["reward"]) for eval_path in eval_paths]
+            logs["Eval_AverageReturn"] = np.mean(eval_returns)
+            logs["Eval_StdReturn"] = np.std(eval_returns)
+            logs["Eval_MaxReturn"] = np.max(eval_returns)
+            logs["Eval_MinReturn"] = np.min(eval_returns)
+            logs["Eval_AverageEpLen"] = np.mean(eval_ep_lens)
 
         logs["Train_EnvstepsSoFar"] = self.agent.t
         print("Timestep %d" % (self.agent.t,))
@@ -380,7 +392,8 @@ class RL_Trainer(object):
 
         # collect eval trajectories, for logging
         print("\nCollecting data for eval...")
-        eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(self.env, eval_policy, self.params['eval_batch_size'], self.params['ep_len'])
+        eval_paths, eval_envsteps_this_batch = utils.sample_trajectories(
+            self.env, eval_policy, self.params['eval_batch_size'], self.params['ep_len'])
 
         # save eval rollouts as videos in tensorboard event file
         if self.logvideo and train_video_paths != None:

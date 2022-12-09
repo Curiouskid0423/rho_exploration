@@ -65,11 +65,11 @@ def get_env_kwargs(env_name):
             'gamma': 1.00,
             'learning_starts': 1000,
             'learning_freq': 1,
-            'frame_history_len': 1,
+            'frame_history_len': 3, #1,
             'target_update_freq': 3000,
             'grad_norm_clipping': 10,
             'lander': True,
-            'num_timesteps': 300000, #500000,
+            'num_timesteps': 500000, #300000,
             'env_wrappers': lunar_empty_wrapper
         }
         # kwargs['exploration_schedule'] = lander_exploration_schedule(kwargs['num_timesteps'])

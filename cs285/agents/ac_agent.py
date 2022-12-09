@@ -54,8 +54,7 @@ class ACAgent(BaseAgent):
         # TODO Implement the following pseudocode:
         # 1) query the critic with ob_no, to get V(s)
         # 2) query the critic with next_ob_no, to get V(s')
-        # 3) estimate the Q value as Q(s, a) = r(s, a) + gamma*V(s')
-        # HINT: Remember to cut off the V(s') term (ie set it to 0) at terminal states (ie terminal_n=1)
+        # 3) estimate the Q value as Q(s, a) = r(s, a) + gamma * V(s')
         # 4) calculate advantage (adv_n) as A(s, a) = Q(s, a) - V(s)
 
         terminal_n = ptu.from_numpy(terminal_n)
