@@ -1,7 +1,7 @@
-# CUDA_VISIBLE_DEVICES=9 python cs285/scripts/run_hw3_dqn.py \
-#     --env_name LunarLander-v3 \
-#     --exp_name lunar-lander-vanilla_ddqn_linear-explore_seed1 \
-#     --double_q --seed 1
+CUDA_VISIBLE_DEVICES=9 python cs285/scripts/run_hw3_dqn.py \
+    --env_name LunarLander-v3 \
+    --exp_name lunar-lander-vanilla_ddqn_linear-explore_seed1 \
+    --double_q --seed 1
 # CUDA_VISIBLE_DEVICES=8 python cs285/scripts/run_hw3_dqn.py \
 #     --env_name LunarLander-v3 \
 #     --exp_name lunar-lander-vanilla_ddqn_linear-explore_seed2 \

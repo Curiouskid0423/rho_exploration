@@ -6,6 +6,7 @@ import numpy as np
 from scipy import stats
 import torch
 from gym import Env
+from gym.vector import AsyncVectorEnv
 from copy import copy
 
 from cs285.policies.base_policy import BasePolicy
@@ -22,11 +23,17 @@ class RhoExplorePolicy(object):
         self.perturb_margin = rho
         self.sample_heuristic = sample_heuristics # options: 'max', 'mode' (mode of top K percentile)
         self.sample_threshold = .5
+        # AsyncVectorEnv config
+        self.use_parallel_envs = False
+        self.num_envs = 10
 
     def get_action(self, obs, env: Env, policy: BasePolicy, perturb_unit: float):
         
         self.env: Env = copy(env) # avoid mutating the environment in a destructive manner by shallow-copying.
         self.initial_state = copy(env)
+
+        if self.use_parallel_envs:
+            self.env = self.get_async_envs(self.env, num=self.num_envs)
 
         if len(obs.shape) > 3:
             observation = obs
@@ -71,10 +78,9 @@ class RhoExplorePolicy(object):
             A list of "cumulative reward + Q value of the last state in mini-rollout",
             ordered by the perturbed_obs. 
         """
-
         # FIXME: Use `gym.vector.AsyncVectorEnv` to vectorize  
         #        different perturbed states' traversal.
-        
+
         qa_results = []
         for ob in perturbed_obs:
             mini_rollout_rewards = 0
@@ -91,6 +97,7 @@ class RhoExplorePolicy(object):
             self.env = copy(self.initial_state) # reset environment
             
         return np.array(qa_results)
+
 
     def sample_by_heuristic(self, obs, scores: np.ndarray, heuristic: str, policy: BasePolicy):
         assert isinstance(scores, np.ndarray) and len(scores.shape) == 1
@@ -114,3 +121,16 @@ class RhoExplorePolicy(object):
             return actions
         else:
             return actions
+
+    def get_async_envs(self, template: Env, num=1) -> AsyncVectorEnv:
+        """
+        Create multiple asynchronous environments to explore in parallel.
+        """
+
+        env_list = AsyncVectorEnv([
+                lambda: copy(template)
+                for _ in range(num)
+            ]
+        )
+        return env_list
+        
