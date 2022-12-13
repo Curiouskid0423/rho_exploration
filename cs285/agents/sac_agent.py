@@ -1,4 +1,6 @@
 import torch
+import torch.nn.functional as F
+from torch.distributions import Categorical
 from collections import OrderedDict
 
 from cs285.critics.bootstrapped_continuous_critic import \
@@ -11,16 +13,27 @@ from cs285.policies.sac_policy import MLPPolicySAC
 from cs285.critics.sac_critic import SACCritic
 from cs285.infrastructure.sac_utils import soft_update_params
 import cs285.infrastructure.pytorch_util as ptu
+from cs285.explore.rho_explore_policy import RhoExplorePolicy
+from gym.spaces import Discrete
 
 class SACAgent(BaseAgent):
     def __init__(self, env: gym.Env, agent_params):
         super(SACAgent, self).__init__()
 
         self.env = env
-        self.action_range = [
-            float(self.env.action_space.low.min()),
-            float(self.env.action_space.high.max())
-        ]
+
+        if isinstance(self.env.action_space, Discrete):
+            vec = self.env.action_space
+            self.action_range = [
+                vec.start, 
+                vec.start+vec.n-1
+            ]
+        else:
+            self.action_range = [
+                float(self.env.action_space.low.min()),
+                float(self.env.action_space.high.max())
+            ]
+
         self.agent_params = agent_params
         self.gamma = self.agent_params['gamma']
         self.critic_tau = 0.005
@@ -45,12 +58,28 @@ class SACAgent(BaseAgent):
         self.training_step = 0
         self.replay_buffer = ReplayBuffer(max_size=100000)
 
+        if 'rho_explore' in self.agent_params and self.agent_params['rho_explore']:
+            self.rho_explorer = RhoExplorePolicy(
+                critic = self.critic,
+                rho = agent_params['rho'], 
+                lmbda = agent_params['lambda'], 
+                rho_sample = agent_params['rho_sample'],
+                sample_heuristics = agent_params['heuristics']
+            )
+            self.mean_state_norm = None
+
     def update_critic(self, ob_no, ac_na, next_ob_no, re_n, terminal_n):
         
         with torch.no_grad():
             # get next action
             next_action_dist = self.actor(next_ob_no)
-            next_action = next_action_dist.rsample()
+            sampled_action = next_action_dist.sample() # could be rank-1 in `discrete` env
+            
+            # Convert discrete actions to one-hot vectors
+            if isinstance(self.env.action_space, Discrete):
+                next_action = F.one_hot(sampled_action)
+            else:
+                next_action = sampled_action
             
             # compute Q value of the next state
             next_Qs = self.critic_target(next_ob_no, next_action)
@@ -58,7 +87,7 @@ class SACAgent(BaseAgent):
 
             # compute target Q (of the next state)
             target_Q = re_n + ((1-terminal_n) * self.gamma * next_Q)
-            next_log_prob = next_action_dist.log_prob(next_action).sum(-1, keepdim=True)
+            next_log_prob = next_action_dist.log_prob(sampled_action).sum(-1, keepdim=True)
             target_Q -= self.gamma * (1-terminal_n) * self.actor.alpha.detach() * next_log_prob
 
         critic_loss = 0
@@ -73,7 +102,6 @@ class SACAgent(BaseAgent):
         critic_loss.backward()
         self.critic.optimizer.step()
 
-
         return critic_loss.item()
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
@@ -83,6 +111,10 @@ class SACAgent(BaseAgent):
         next_ob_no = ptu.from_numpy(next_ob_no)
         re_n = ptu.from_numpy(re_n).unsqueeze(1)
         terminal_n = ptu.from_numpy(terminal_n).unsqueeze(1)
+        
+        if self.actor.discrete:
+            ac_na = F.one_hot(ac_na.to(torch.int64))
+        assert ac_na.shape[-1] == self.agent_params['ac_dim']
 
         loss = OrderedDict()
 
@@ -90,13 +122,8 @@ class SACAgent(BaseAgent):
         for _ in range(self.agent_params['num_critic_updates_per_agent_update']):
             critic_loss = self.update_critic(ob_no, ac_na, next_ob_no, re_n, terminal_n)
             loss['Critic_Loss'] = critic_loss
-            # if self.training_step % self.critic_target_update_frequency == 0:
-            #     soft_update_params(self.critic, self.critic_target, self.critic_tau)
-
-        # FIXME: Testing `left_out` run. seems like restricting `soft_update_params` 
-        # frequency yields better performance
-        if self.training_step % self.critic_target_update_frequency == 0:
-            soft_update_params(self.critic, self.critic_target, self.critic_tau)
+            if self.training_step % self.critic_target_update_frequency == 0:
+                soft_update_params(self.critic, self.critic_target, self.critic_tau)
 
         # periodically update the Actor network
         if self.training_step % self.actor_update_frequency == 0:

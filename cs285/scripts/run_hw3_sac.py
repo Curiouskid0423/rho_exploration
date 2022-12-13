@@ -3,7 +3,11 @@ import time
 
 from cs285.agents.sac_agent import SACAgent
 from cs285.infrastructure.rl_trainer import RL_Trainer
+from cs285.infrastructure.ac_discrete_utils import get_atari_env_kwargs
 
+ATARI_TASKS = [
+    'PongNoFrameskip-v4', 'LunarLander-v3', 'MsPacman-v0',
+]
 
 class SAC_Trainer(object):
 
@@ -32,8 +36,21 @@ class SAC_Trainer(object):
             'num_actor_updates_per_agent_update': params['num_actor_updates_per_agent_update'],
         }
 
-        agent_params = {**computation_graph_args, **estimate_advantage_args, **train_args}
+        agent_params = {
+            **computation_graph_args, 
+            **estimate_advantage_args, 
+            **train_args,
+        }
 
+        # Set up Atari environment if required
+        if params['env_name'] in ATARI_TASKS:
+            print("WARNING: Beware of accidentally overwritting agent_params when using Atari tasks.")
+            env_args = get_atari_env_kwargs(params['env_name'])
+            agent_params = {
+                **agent_params,
+                **env_args
+            }
+        
         self.params = params
         self.params['agent_class'] = SACAgent
         self.params['agent_params'] = agent_params
@@ -57,9 +74,19 @@ def main():
 
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env_name', type=str, default='CartPole-v0')
+    
+    # Allow either MuJoCo or Atari tasks
+    parser.add_argument(
+        '--env_name',
+        default='CartPole-v0',
+        choices=(
+            'PongNoFrameskip-v4', 'LunarLander-v3', 'MsPacman-v0',
+            'CartPole-v0', 'HalfCheetah-v4', 'InvertedPendulum-v4', 'Ant-v4', 'Hopper-v4'
+        )
+    )
+
     parser.add_argument('--ep_len', type=int, default=200)
-    parser.add_argument('--exp_name', type=str, default='todo')
+    parser.add_argument('--exp_name', type=str, default='placeholder_name')
     parser.add_argument('--n_iter', '-n', type=int, default=200)
 
     parser.add_argument('--num_agent_train_steps_per_iter', type=int, default=1)
@@ -84,6 +111,16 @@ def main():
     parser.add_argument('--scalar_log_freq', type=int, default=10)
 
     parser.add_argument('--save_params', action='store_true')
+
+    # final project: rho-explore
+    parser.add_argument('--explore', action='store_false')  # decide if we even need exploration at all.
+                                                            # in some environments, such as MuJoCo tasks, 
+                                                            # agent's success doesn't rely much on exploration
+    parser.add_argument('--rho_explore', action='store_true')
+    parser.add_argument('--rho', type=float)            # perturbation bound
+    parser.add_argument('--lambda', type=int)           # lambda step away
+    parser.add_argument('--rho_sample', type=int)       # number of perturbation samples
+    parser.add_argument('--heuristics', type=str, default='max') 
 
     args = parser.parse_args()
 

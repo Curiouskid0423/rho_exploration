@@ -31,7 +31,10 @@ class DQNAgent(object):
 
         lander = agent_params['env_name'].startswith('LunarLander')
         self.replay_buffer = MemoryOptimizedReplayBuffer(
-            agent_params['replay_buffer_size'], agent_params['frame_history_len'], lander=lander)
+            agent_params['replay_buffer_size'], 
+            agent_params['frame_history_len'], 
+            lander=lander
+        )
         self.t = 0
         self.num_param_updates = 0
 
@@ -43,7 +46,7 @@ class DQNAgent(object):
                 rho_sample = agent_params['rho_sample'],
                 sample_heuristics = agent_params['heuristics']
             )
-            self.mean_state_norm = None       
+            self.mean_state_norm = None 
 
     def add_to_replay_buffer(self, paths):
         pass

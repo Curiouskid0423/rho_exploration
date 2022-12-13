@@ -23,7 +23,7 @@ class RhoExplorePolicy(object):
         self.perturb_margin = rho
         self.sample_heuristic = sample_heuristics # options: 'max', 'mode' (mode of top K percentile)
         self.sample_threshold = .5
-        # AsyncVectorEnv config
+        # TODO: AsyncVectorEnv config
         self.use_parallel_envs = False
         self.num_envs = 10
 

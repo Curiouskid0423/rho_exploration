@@ -34,8 +34,10 @@ class ReplayBuffer(object):
             self.concatenated_rews = concatenated_rews[-self.max_size:]
         else:
             self.obs = np.concatenate([self.obs, observations])[-self.max_size:]
-            if len(actions.shape) == 1:
-                actions = actions[None]
+            # TODO: Code below used to be required for continous tasks in MuJoCo.
+            # Fix compatibility issue with Discrete and Continuous code.
+            # if len(actions.shape) == 1:
+            #     actions = actions[None]
             # if len(self.acs.shape) == 1:
             #     self.acs = self.acs[None]
             self.acs = np.concatenate([self.acs, actions])[-self.max_size:]

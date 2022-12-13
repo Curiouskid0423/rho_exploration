@@ -5,6 +5,7 @@ from cs285.infrastructure import pytorch_util as ptu
 from cs285.critics.bootstrapped_continuous_critic import \
     BootstrappedContinuousCritic
 from cs285.infrastructure.replay_buffer import ReplayBuffer
+from cs285.infrastructure.dqn_utils import MemoryOptimizedReplayBuffer
 from cs285.infrastructure.utils import *
 from cs285.policies.MLP_policy import MLPPolicy, MLPPolicyAC
 from .base_agent import BaseAgent
@@ -16,10 +17,10 @@ class ACAgent(BaseAgent):
 
         self.env = env
         self.agent_params = agent_params
-
+        
         self.gamma = self.agent_params['gamma']
         self.standardize_advantages = self.agent_params['standardize_advantages']
-
+        
         self.actor = MLPPolicyAC(
             self.agent_params['ac_dim'],
             self.agent_params['ob_dim'],
@@ -28,8 +29,18 @@ class ACAgent(BaseAgent):
             self.agent_params['discrete'],
             self.agent_params['learning_rate'],
         )
-        self.critic = BootstrappedContinuousCritic(self.agent_params)
 
+        if 'exploration_schedule' in agent_params:
+            self.exploration = agent_params['exploration_schedule']
+            # FIXME: Add exploration to ac_agent logic
+            
+        self.critic = BootstrappedContinuousCritic(self.agent_params)
+        if 'lander' in agent_params and agent_params['lander']:
+            self.replay_buffer = MemoryOptimizedReplayBuffer(
+                agent_params['replay_buffer_size'], 
+                agent_params['frame_history_len'], 
+                lander=agent_params['lander']
+            )
         self.replay_buffer = ReplayBuffer()
 
     def train(self, ob_no, ac_na, re_n, next_ob_no, terminal_n):
@@ -47,11 +58,13 @@ class ACAgent(BaseAgent):
         for _ in range(self.agent_params['num_actor_updates_per_agent_update']):
             actor_loss = self.actor.update(ob_no, ac_na, adv_n=ptu.from_numpy(advantage))
             loss['Actor_Loss'].append(actor_loss)
-  
+        
+        loss['Critic_Loss'] = np.array(loss['Critic_Loss']).mean()
+        loss['Actor_Loss'] = np.array(loss['Actor_Loss']).mean()
+
         return loss
 
     def estimate_advantage(self, ob_no, next_ob_no, re_n, terminal_n):
-        # TODO Implement the following pseudocode:
         # 1) query the critic with ob_no, to get V(s)
         # 2) query the critic with next_ob_no, to get V(s')
         # 3) estimate the Q value as Q(s, a) = r(s, a) + gamma * V(s')

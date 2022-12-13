@@ -1,9 +1,10 @@
-from cs285.policies.MLP_policy import MLPPolicy
 import torch
+from torch.distributions import Distribution
 import numpy as np
+from cs285.policies.MLP_policy import MLPPolicy
 from cs285.infrastructure.sac_utils import SquashedNormal
 from cs285.infrastructure import pytorch_util as ptu
-from torch import nn
+from torch.distributions import Categorical
 import itertools
 
 class MLPPolicySAC(MLPPolicy):
@@ -50,18 +51,21 @@ class MLPPolicySAC(MLPPolicy):
         action = ptu.to_numpy(action)
         return action
         
-    def forward(self, observation: torch.FloatTensor):
+    def forward(self, observation: torch.FloatTensor) -> Distribution:
 
-        assert not self.discrete, "Discrete mode not implemented for this homework"
-        
-        batch_mean = self.mean_net(observation)
-        log_std = torch.clip(
-            input=torch.tanh(self.logstd), 
-            min=self.log_std_bounds[0], 
-            max=self.log_std_bounds[1]
-        )
-        squashed_distribution = SquashedNormal(batch_mean, scale=torch.exp(log_std))
-        return squashed_distribution
+        if self.discrete:
+            logits = self.logits_na(observation)
+            action_dist = Categorical(logits=logits)
+            return action_dist
+        else:
+            batch_mean = self.mean_net(observation)
+            log_std = torch.clip(
+                input=torch.tanh(self.logstd), 
+                min=self.log_std_bounds[0], 
+                max=self.log_std_bounds[1]
+            )
+            squashed_distribution = SquashedNormal(batch_mean, scale=torch.exp(log_std))
+            return squashed_distribution
 
     def update(self, obs, critic):
 

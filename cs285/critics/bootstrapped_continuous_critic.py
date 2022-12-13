@@ -41,10 +41,22 @@ class BootstrappedContinuousCritic(nn.Module, BaseCritic):
         )
         self.critic_network.to(ptu.device)
         self.loss = nn.MSELoss()
-        self.optimizer = optim.Adam(
-            self.critic_network.parameters(),
-            self.learning_rate,
-        )
+        if 'optimizer_spec' in hparams:
+            # this if clause is originally to accommodate Lunar-Lander
+            self.optimizer_spec = hparams['optimizer_spec']
+            self.optimizer = self.optimizer_spec.constructor(
+                self.critic_network.parameters(),
+                **self.optimizer_spec.optim_kwargs
+            )
+            self.learning_rate_scheduler = optim.lr_scheduler.LambdaLR(
+                self.optimizer,
+                self.optimizer_spec.learning_rate_schedule,
+            )
+        else:
+            self.optimizer = optim.Adam(
+                self.critic_network.parameters(),
+                self.learning_rate,
+            )
 
     def forward(self, obs):
         return self.critic_network(obs).squeeze(1)

@@ -55,8 +55,9 @@ class RL_Trainer(object):
         register_custom_envs()
         if self.params['agent_class'] is SACAgent:
             self.env = gym.make(self.params['env_name'], max_episode_steps=self.params['ep_len'])
-        else:
+        else: # for DQN and Actor Critic
             self.env = gym.make(self.params['env_name'])
+
         if self.params['video_log_freq'] > 0:
             self.episode_trigger = lambda episode: episode % self.params['video_log_freq'] == 0
         else:
@@ -140,7 +141,7 @@ class RL_Trainer(object):
         for itr in tqdm(range(n_iter)):
             if itr % print_period == 0:
                 print("\n\n********** Iteration %i ************"%itr)
-
+            
             # decide if videos should be rendered/logged at this iteration
             if itr % self.params['video_log_freq'] == 0 and self.params['video_log_freq'] != -1:
                 self.logvideo = True

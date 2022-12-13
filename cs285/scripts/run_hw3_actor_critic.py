@@ -3,7 +3,11 @@ import time
 
 from cs285.agents.ac_agent import ACAgent
 from cs285.infrastructure.rl_trainer import RL_Trainer
+from cs285.infrastructure.sac_utils import get_atari_env_kwargs
 
+DISCRETE_TASKS = [
+    'PongNoFrameskip-v4', 'LunarLander-v3', 'MsPacman-v0',
+]
 
 class AC_Trainer(object):
 
@@ -32,7 +36,20 @@ class AC_Trainer(object):
             'num_actor_updates_per_agent_update': params['num_actor_updates_per_agent_update'],
         }
 
-        agent_params = {**computation_graph_args, **estimate_advantage_args, **train_args}
+        agent_params = {
+            **computation_graph_args, 
+            **estimate_advantage_args, 
+            **train_args,
+        }
+
+        # Set up Atari environment if required
+        if params['env_name'] in DISCRETE_TASKS:
+            print("WARNING: Beware of accidentally overwritting agent_params when using Atari tasks.")
+            env_args = get_atari_env_kwargs(params['env_name'])
+            agent_params = {
+                **agent_params,
+                **env_args
+            }
 
         self.params = params
         self.params['agent_class'] = ACAgent

@@ -3,6 +3,7 @@ import time
 import copy
 from tqdm import tqdm
 from gym import Env
+from gym.spaces import Discrete
 from cs285.policies.base_policy import BasePolicy
 
 ############################################
@@ -76,11 +77,15 @@ def sample_trajectory(env: Env, policy: BasePolicy, max_path_length: int, render
         # use the most recent ob to decide what to do
         obs.append(ob)
         ac = policy.get_action(ob) # HINT: query the policy's get_action function
-        if isinstance(ac, list):
+        if isinstance(ac, np.ndarray) and len(ac.shape) > 1:
             ac = ac[0]
+        if isinstance(env.action_space, Discrete):
+            ac = ac.squeeze()
+
         acs.append(ac)
 
         # take that action and record results
+        
         ob, rew, done, _ = env.step(ac)
 
         # record result of taking that action

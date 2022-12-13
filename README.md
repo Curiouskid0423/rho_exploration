@@ -1,6 +1,6 @@
 # CS285 Deep Reinforcment Learning Project
 
-## Perturbation-based Exploration
+### Perturbation-based Exploration
 
 All training scripts are located in the `scripts/` directory
 
