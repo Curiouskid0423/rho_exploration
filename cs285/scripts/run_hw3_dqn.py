@@ -69,6 +69,8 @@ def main():
     parser.add_argument('--lambda', type=int)           # lambda step away
     parser.add_argument('--rho_sample', type=int)       # number of perturbation samples
     parser.add_argument('--heuristics', type=str, default='max') 
+    parser.add_argument('--rho_exp_threshold', type=float, default=0.2) 
+    parser.add_argument('--rho_exp_interval', type=int) 
     
     args = parser.parse_args()
 

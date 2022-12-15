@@ -47,6 +47,25 @@ class DQNAgent(object):
                 sample_heuristics = agent_params['heuristics']
             )
             self.mean_state_norm = None 
+            # if set to True, do rho-explore for a few timesteps, 
+            # then turn it off again
+            
+            self.rho_trigger = False 
+            self.interval = agent_params['rho_exp_interval']
+            self.iter_count = 0
+
+    def process_rho_explore(self):
+        if self.rho_trigger and self.iter_count >= self.interval:
+            # last round of rho-explore
+            self.rho_trigger = False
+            self.iter_count = 0
+        elif not self.rho_trigger:
+            # beginning of rho-explore
+            self.rho_trigger = True
+            self.iter_count = 1
+        else:
+            # during the interval of rho-explore
+            self.iter_count += 1
 
     def add_to_replay_buffer(self, paths):
         pass
@@ -57,7 +76,8 @@ class DQNAgent(object):
         local exploration, or exploitation.
         """
         eps = self.exploration.value(self.t)
-        cap = .5
+        # the lower `threshold` is, the less likely agent will do rho-explore
+        threshold = self.agent_params['rho_exp_threshold'] 
         count = np.random.random()
         if not hasattr(self, 'rho_explorer'):
             if (count > (1 - eps)) or self.t < self.learning_starts:
@@ -65,13 +85,16 @@ class DQNAgent(object):
             else:
                 return 'exploit'
         else:
-            if count > cap: # exploitation
+            explore = (count > (1 - eps)) or self.t < self.learning_starts
+            if not explore:
                 return 'exploit'
             else: # exploration
-                encourage_sparcity = eps > cap or count < eps # eps typically decreases over time
-                if encourage_sparcity or self.t < self.learning_starts:
+                threshold *= eps
+                if (self.t < self.learning_starts) or \
+                    (not self.rho_trigger and np.random.random() > threshold):
                     return 'sparse'
                 else:
+                    self.process_rho_explore()
                     return 'local'
 
     def step_env(self):
