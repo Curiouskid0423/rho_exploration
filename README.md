@@ -1,6 +1,6 @@
 # Neighboring States-based RL Exploration
 
-All training scripts are located in the `scripts/` directory. To be updated with more extensive experiments on different agents (e.g. SAC, PPO).
+Repo for this [ArXiv](https://arxiv.org/pdf/2212.10712.pdf) paper. All training scripts are located in the `scripts/` directory. To be updated with more extensive experiments on different agents (e.g. SAC, PPO).
 
 Hyperparameters to consider (as of Dec 2022)
 | Hyperparameter            | values                |
